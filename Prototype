@@ -1,0 +1,187 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+typedef struct Student {
+    int id;
+    char name[50];
+    int age;
+    char major[50];
+    float gpa;
+    struct Student* next;
+} Student;
+
+Student* loadFromFile(const char* filename);
+void saveToFile(const char* filename, Student* head);
+Student* addStudent(Student* head, int id, const char* name, int age, const char* major, float gpa);
+Student* deleteStudent(Student* head, int id);
+Student* updateStudent(Student* head, int id, const char* name, int age, const char* major, float gpa);
+void retrieveStudent(Student* head, int id);
+void displayStudents(Student* head);
+void freeList(Student* head);
+
+int main() {
+    Student* head = NULL;
+    int choice, id, age;
+    float gpa;
+    char name[50], major[50];
+
+    head = loadFromFile("student_input.txt");
+
+    do {
+        printf("\nStudent Record Management System\n");
+        printf("1. Add Student\n");
+        printf("2. Delete Student\n");
+        printf("3. Update Student\n");
+        printf("4. Retrieve Student\n");
+        printf("5. Display All Students\n");
+        printf("6. Save and Exit\n");
+        printf("Enter your choice: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1:
+                printf("Enter ID, Name, Age, Major, GPA: ");
+                scanf("%d %s %d %s %f", &id, name, &age, major, &gpa);
+                head = addStudent(head, id, name, age, major, gpa);
+                break;
+            case 2:
+                printf("Enter ID to delete: ");
+                scanf("%d", &id);
+                head = deleteStudent(head, id);
+                break;
+            case 3:
+                printf("Enter ID, Updated Name, Age, Major, GPA: ");
+                scanf("%d %s %d %s %f", &id, name, &age, major, &gpa);
+                head = updateStudent(head, id, name, age, major, gpa);
+                break;
+            case 4:
+                printf("Enter ID to retrieve: ");
+                scanf("%d", &id);
+                retrieveStudent(head, id);
+                break;
+            case 5:
+                displayStudents(head);
+                break;
+            case 6:
+                saveToFile("student_output.txt", head);
+                printf("Data saved to file. Exiting...\n");
+                break;
+            default:
+                printf("Invalid choice! Try again.\n");
+        }
+    } while (choice != 6);
+
+    freeList(head);
+    return 0;
+}
+
+Student* loadFromFile(const char* filename) {
+    FILE* file = fopen(filename, "r");
+    if (!file) {
+        printf("Error: Cannot open file %s\n", filename);
+        return NULL;
+    }
+    Student* head = NULL;
+    int id, age;
+    float gpa;
+    char name[50], major[50];
+    while (fscanf(file, "%d,%[^,],%d,%[^,],%f", &id, name, &age, major, &gpa) != EOF) {
+        head = addStudent(head, id, name, age, major, gpa);
+    }
+    fclose(file);
+    return head;
+}
+
+void saveToFile(const char* filename, Student* head) {
+    FILE* file = fopen(filename, "w");
+    if (!file) {
+        printf("Error: Cannot open file %s\n", filename);
+        return;
+    }
+    Student* current = head;
+    while (current) {
+        fprintf(file, "%d,%s,%d,%s,%.2f\n", current->id, current->name, current->age, current->major, current->gpa);
+        current = current->next;
+    }
+    fclose(file);
+}
+
+Student* addStudent(Student* head, int id, const char* name, int age, const char* major, float gpa) {
+    Student* newStudent = (Student*)malloc(sizeof(Student));
+    newStudent->id = id;
+    strcpy(newStudent->name, name);
+    newStudent->age = age;
+    strcpy(newStudent->major, major);
+    newStudent->gpa = gpa;
+    newStudent->next = NULL;
+
+    if (!head || gpa > head->gpa) {
+        newStudent->next = head;
+        return newStudent;
+    }
+    Student* current = head;
+    while (current->next && current->next->gpa >= gpa) {
+        current = current->next;
+    }
+    newStudent->next = current->next;
+    current->next = newStudent;
+    return head;
+}
+
+Student* deleteStudent(Student* head, int id) {
+    if (!head) return NULL;
+    if (head->id == id) {
+        Student* temp = head;
+        head = head->next;
+        free(temp);
+        return head;
+    }
+    Student* current = head;
+    while (current->next && current->next->id != id) {
+        current = current->next;
+    }
+    if (current->next) {
+        Student* temp = current->next;
+        current->next = current->next->next;
+        free(temp);
+    } else {
+        printf("Student with ID %d not found.\n", id);
+    }
+    return head;
+}
+
+Student* updateStudent(Student* head, int id, const char* name, int age, const char* major, float gpa) {
+    head = deleteStudent(head, id);
+    head = addStudent(head, id, name, age, major, gpa);
+    return head;
+}
+
+void retrieveStudent(Student* head, int id) {
+    Student* current = head;
+    while (current) {
+        if (current->id == id) {
+            printf("ID: %d, Name: %s, Age: %d, Major: %s, GPA: %.2f\n", current->id, current->name, current->age, current->major, current->gpa);
+            return;
+        }
+        current = current->next;
+    }
+    printf("Student with ID %d not found.\n", id);
+}
+
+void displayStudents(Student* head) {
+    Student* current = head;
+    while (current) {
+        printf("ID: %d, Name: %s, Age: %d, Major: %s, GPA: %.2f\n", current->id, current->name, current->age, current->major, current->gpa);
+        current = current->next;
+    }
+}
+
+void freeList(Student* head) {
+    Student* current = head;
+    while (current) {
+        Student* temp = current;
+        current = current->next;
+        free(temp);
+    }
+}
